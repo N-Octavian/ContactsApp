@@ -13,7 +13,7 @@ class ContactListView(generics.ListCreateAPIView):
     #  Overriding post method to check if we already have this contact's details
     #  Also checking if the phone number is valid
     def post(self, request, *args, **kwargs):
-        serializer = ContactSerializer(data=request.data, partial=True)
+        serializer = ContactSerializer(data=request.data)
         if serializer.is_valid():
             name = serializer.validated_data['name']
             phone_number = serializer.validated_data['phone_number']
@@ -24,7 +24,7 @@ class ContactListView(generics.ListCreateAPIView):
             #  We create a dict for error message to be able to return multiple error messages
             error_messages = {}
 
-            if re.match(phone_number, phone_number_regex):
+            if not re.match(phone_number_regex, phone_number):
                 error_messages['phone_number_validation'] = 'number can contain only numbers and symbols'
             if Contact.objects.filter(name=name).exists():
                 error_messages['name'] = 'Another contact has this name'
@@ -35,7 +35,7 @@ class ContactListView(generics.ListCreateAPIView):
 
             if len(error_messages) == 0:
                 serializer.save()
-                return Response(serializer.data)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
                 return Response(error_messages, status=status.HTTP_400_BAD_REQUEST)
 
@@ -50,7 +50,7 @@ class ContactDetailedView(generics.RetrieveUpdateDestroyAPIView):
     #  Also checking if the phone number is valid
     def put(self, request, *args, **kwargs):
         contact = self.get_object()
-        serializer = ContactSerializer(contact, data=request.data)
+        serializer = ContactSerializer(contact, data=request.data, partial=True)
         if serializer.is_valid():
 
             # When updating an existing contact, we'll always find contact (that contact itself) that has
@@ -64,7 +64,7 @@ class ContactDetailedView(generics.RetrieveUpdateDestroyAPIView):
             phone_number = serializer.validated_data['phone_number']
             email = serializer.validated_data['email']
 
-            phone_number_regex = "([0-9]|[\-+#]*)"
+            phone_number_regex = "([0-9\-+#]*)"
 
             # We'll check here which new data is the same as the old data and assign allowed duplicates
             if name == Contact.objects.get(pk=pk).name:
@@ -77,7 +77,7 @@ class ContactDetailedView(generics.RetrieveUpdateDestroyAPIView):
             #  We create a dict for error message to be able to return multiple error messages
             error_messages = {}
 
-            if re.match(phone_number, phone_number_regex):
+            if not re.match(phone_number_regex, phone_number):
                 error_messages['phone_number_validation'] = 'number can contain only numbers and symbols'
             if Contact.objects.filter(name=name).count() > name_allowed_duplicates:
                 error_messages['name'] = 'Another contact has this name'
@@ -88,7 +88,7 @@ class ContactDetailedView(generics.RetrieveUpdateDestroyAPIView):
 
             if len(error_messages) == 0:
                 serializer.save()
-                return Response(serializer.data)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
                 return Response(error_messages, status=status.HTTP_400_BAD_REQUEST)
 
