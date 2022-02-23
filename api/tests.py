@@ -86,21 +86,19 @@ class TestUpdate(APITestCase):
             'email': 'soloist@gmail.com'
         }
         cls.contact = Contact.objects.create(name='test_name', phone_number='test_number', email='test_email@gmail.com')
+        cls.url = reverse('contact_detail', kwargs={'pk': cls.contact.pk})
 
     def test_update_name(self):
         self.data['name'] = 'updated_name'
-        url = reverse('contact_detail', kwargs={'pk': self.contact.pk})
-        response = self.client.put(url, data=self.data)
+        response = self.client.put(self.url, data=self.data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_update_phone_number(self):
         self.data['phone_number'] = "07555555"
-        url = reverse('contact_detail', kwargs={'pk': self.contact.pk})
-        response = self.client.put(url, data=self.data)
+        response = self.client.put(self.url, data=self.data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_update_email(self):
         self.data['email'] = 'updated_email@gmail.com'
-        url = reverse('contact_detail', kwargs={'pk': self.contact.pk})
-        response = self.client.put(url, data=self.data)
+        response = self.client.put(self.url, data=self.data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
