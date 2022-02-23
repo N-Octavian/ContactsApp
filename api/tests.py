@@ -1,60 +1,106 @@
 import json
-
+from .models import Contact
+from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework import status
 
-class CreateReadUpdateDeleteTest(APITestCase):
 
-    def test_create_with_no_data(self):
-        response = self.client.post("/api/contacts/")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+class TestCreate(APITestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.url = reverse('contacts')
 
-    def test_create_missing_name(self):
+    def test_create_contact(self):
         data = {
-            "name": "",
-            "phone_number": "543534534543",
-            "email": "dolofanel@gmail.com"
+            'name': 'test_name',
+            'phone_number': '03453434',
+            'email': 'test@gmail.com'
         }
-        response = self.client.post("/api/contacts/")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_create_missing_email(self):
-        data = {
-            "name": "fddfgfd",
-            "phone_number": "543534534543",
-            "email": "sds@gmail.com"
-        }
-        response = self.client.post("/api/contacts/")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_contact_create(self):
-        data = {
-            "name": "testcase",
-            "phone_number": "02752111382",
-            "email": "dolofanel@gmail.com"
-        }
-        response = self.client.post("/api/contacts/", json.dumps(data), content_type="application/json")
+        response = self.client.post(self.url, data=data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    def test_contacts_list(self):
-        response = self.client.get("/api/contacts/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_individual_contact_get(self):
-        response = self.client.get("/api/contacts/", kwargs={"pk": 1})
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_update_client_details(self):
+    # Should work because we want users to create contacts with just a name
+    def test_create_with_name_only(self):
         data = {
-            "name": "testcase",
-            "phone_number": "02752111382",
-            "email": "dolofanel@gmail.com"
+            'name': 'test_name'
         }
-        response = self.client.put("/api/contacts/", json.dumps(data), content_type="application/json", kwargs={"pk":1})
+        url = reverse('contacts')
+        response = self.client.post(self.url, data=data)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        print(response)
+
+    # These three should not work because name is mandatory
+    def test_create_with_phone_number_only(self):
+        data = {
+            'phone_number': '07553434343'
+        }
+        url = reverse('contacts')
+        response = self.client.post(self.url, data=data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_with_email_only(self):
+        data = {
+            'email': 'mail@gmail.com'
+        }
+        url = reverse('contacts')
+        response = self.client.post(self.url, data=data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_with_mail_and_phone(self):
+        data = {
+            'phone_number': '0756454454',
+            'email': 'mail@gmail.com'
+        }
+        url = reverse('contacts')
+        response = self.client.post(self.url, data=data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_with_bad_email(self):
+        data = {
+            'name': 'name',
+            'email': 'test',
+            'phone_number': '064545454'
+        }
+        url = reverse('contacts')
+        response = self.client.post(self.url, data=data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+class TestDelete(APITestCase):
+    @classmethod
+    def setUpTestData(cls):
+        # We need to create a contact, because django has a different database for testing
+        cls.contact = Contact.objects.create(name='test_name', phone_number='test_number', email='test_email@gmail.com')
 
     def test_delete_contact(self):
-        response = self.client.delete("/api/contacts/", kwargs={"pk": 1})
+        url = reverse('contact_detail', kwargs={'pk': self.contact.pk})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+
+class TestUpdate(APITestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.data = {
+            'name': 'dolofanel',
+            'phone_number': '03453434',
+            'email': 'soloist@gmail.com'
+        }
+        cls.contact = Contact.objects.create(name='test_name', phone_number='test_number', email='test_email@gmail.com')
+
+    def test_update_name(self):
+        self.data['name'] = 'updated_name'
+        url = reverse('contact_detail', kwargs={'pk': self.contact.pk})
+        response = self.client.put(url, data=self.data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
+
+    def test_update_phone_number(self):
+        self.data['phone_number'] = "07555555"
+        url = reverse('contact_detail', kwargs={'pk': self.contact.pk})
+        response = self.client.put(url, data=self.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_update_email(self):
+        self.data['email'] = 'updated_email@gmail.com'
+        url = reverse('contact_detail', kwargs={'pk': self.contact.pk})
+        response = self.client.put(url, data=self.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
